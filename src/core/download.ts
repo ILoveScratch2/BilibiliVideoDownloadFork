@@ -7,6 +7,7 @@ import store from './mainStore'
 import { throttle } from 'lodash'
 import { STATUS } from '../assets/data/status'
 import { ipcMain } from 'electron'
+import { qualityMap } from '../assets/data/quality'
 
 const log = require('electron-log')
 const stream = require('stream')
@@ -41,7 +42,10 @@ export default async (videoInfo: TaskData, event: IpcMainEvent, setting: Setting
   const updateData = {
     id: videoInfo.id,
     status: STATUS.VIDEO_DOWNLOADING,
-    progress: Math.round(0)
+    progress: Math.round(0),
+    originalUrl: videoInfo.url,
+    qualityLabel: `未知(${videoInfo.quality})`,
+    startTime: Date.now()
   }
   event.reply('download-video-status', updateData)
   store.set(`taskList.${videoInfo.id}`, {
@@ -123,7 +127,8 @@ export default async (videoInfo: TaskData, event: IpcMainEvent, setting: Setting
         transferred: progress.transferred,
         total: progress.total,
         timestamp: Date.now()
-      }
+      },
+      qualityLabel: `未知(${videoInfo.quality})`
     }
     event.reply('download-video-status', updateData)
     store.set(`taskList.${videoInfo.id}`, Object.assign(videoInfo, updateData))
@@ -134,7 +139,17 @@ export default async (videoInfo: TaskData, event: IpcMainEvent, setting: Setting
   }
   // 下载视频
   await pipeline(
-    got.stream(videoInfo.downloadUrl.video, downloadConfig)
+    got.stream(videoInfo.downloadUrl.video, {
+      ...downloadConfig,
+      // 支持断点续传
+      headers: {
+        ...downloadConfig.headers,
+        // 如果有下载进度，添加Range头，实现断点续传
+        ...(videoInfo.downloadProgress && videoInfo.downloadProgress.transferred > 0 && videoInfo.status === STATUS.PAUSED
+          ? { Range: `bytes=${videoInfo.downloadProgress.transferred}-` }
+          : {})
+      }
+    })
       .on('downloadProgress', throttle(videoProgressNotify, 1000))
       .on('error', async (error: any) => {
         log.error(`视频下载失败：${videoInfo.title}--${error.message}`)
@@ -175,7 +190,17 @@ export default async (videoInfo: TaskData, event: IpcMainEvent, setting: Setting
 
   // 下载音频
   await pipeline(
-    got.stream(videoInfo.downloadUrl.audio, downloadConfig)
+    got.stream(videoInfo.downloadUrl.audio, {
+      ...downloadConfig,
+      // 支持断点续传
+      headers: {
+        ...downloadConfig.headers,
+        // 如果有下载进度，添加Range头，实现断点续传
+        ...(videoInfo.downloadProgress && videoInfo.downloadProgress.transferred > 0 && videoInfo.status === STATUS.PAUSED
+          ? { Range: `bytes=${videoInfo.downloadProgress.transferred}-` }
+          : {})
+      }
+    })
       .on('downloadProgress', throttle(audioProgressNotify, 1000))
       .on('error', async (error: any) => {
         log.error(`音频下载失败：${videoInfo.title} ${error.message}`)

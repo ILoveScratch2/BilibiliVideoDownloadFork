@@ -639,6 +639,7 @@ const handleFileDir = (page: number, title: string, videoInfo: VideoData, bvid: 
   const isFolder = store.settingStore().isFolder
   return `${downloadPath}${isFolder ? `/${name}/` : ''}`
 }
+
 interface IParseBVPageData {
   bvid: string,
   title: string,
@@ -762,11 +763,55 @@ function handleAudio (dash: any) {
   return audio
 }
 
+// 处理暂停/继续下载
+async togglePauseDownload(taskId: string, isPaused: boolean) {
+  const task = store.get(`taskList.${taskId}`)
+  if (!task) return false
+
+  if (isPaused) {
+    // 暂停下载
+    store.set(`taskList.${taskId}.status`, STATUS.PAUSED)
+    return true
+  } else {
+    // 继续下载 - 需要重新获取下载地址
+    try {
+      // 保存原始状态
+      const originalStatus = task.status
+      
+      // 设置为准备开始下载状态
+      store.set(`taskList.${taskId}.status`, STATUS.PLAN_START)
+      
+      // 重新获取下载地址
+      const currentCid = task.cid
+      const currentBvid = task.bvid
+      const quality = task.quality
+      
+      // 获取新的下载URL
+      const downloadUrlData = await this.getDownloadUrl(currentCid, currentBvid, quality)
+      
+      if (!downloadUrlData || !downloadUrlData.video || !downloadUrlData.audio) {
+        // 如果获取失败，恢复原状态
+        store.set(`taskList.${taskId}.status`, originalStatus)
+        return false
+      }
+      
+      // 更新下载地址
+      store.set(`taskList.${taskId}.downloadUrl`, downloadUrlData)
+      
+      return true
+    } catch (error) {
+      console.error('继续下载失败:', error)
+      return false
+    }
+  }
+}
+
 export {
   checkLogin,
   checkUrl,
   checkUrlRedirect,
   parseHtml,
   getDownloadList,
-  addDownload
+  addDownload,
+  togglePauseDownload
 }

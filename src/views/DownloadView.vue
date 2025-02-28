@@ -143,6 +143,8 @@ const showContextmenu = async (key: string) => {
     reloadDownload()
   } else if (res === 'play') {
     playVideo()
+  } else if (res === 'togglePause') {
+    togglePauseDownload()
   }
 }
 
@@ -192,6 +194,25 @@ const reloadDownload = async () => {
   }
 
   loading()
+}
+
+const togglePauseDownload = async () => {
+  if (selected.value.length === 0) return
+  
+  // 处理所有选中的任务
+  for (const taskId of selected.value) {
+    try {
+      const result = await window.electron.togglePauseDownload(taskId)
+      if (result.success) {
+        message.success(result.message)
+      } else {
+        message.error(result.message)
+      }
+    } catch (error) {
+      console.error('暂停/继续下载失败:', error)
+      message.error('操作失败，请重试')
+    }
+  }
 }
 
 const openDir = () => {

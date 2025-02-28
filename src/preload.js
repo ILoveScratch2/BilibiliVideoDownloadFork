@@ -55,6 +55,9 @@ contextBridge.exposeInMainWorld('electron', {
   openReloadVideoDialog (count) {
     return ipcRenderer.invoke('open-reload-video-dialog', count)
   },
+  togglePauseDownload (taskId) {
+    return ipcRenderer.invoke('toggle-pause-download', taskId)
+  },
   saveDanmukuFile (content, path) {
     ipcRenderer.send('save-danmuku-file', content, path)
   },

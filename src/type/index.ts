@@ -103,7 +103,15 @@ export interface VideoData {
 
 export interface TaskData extends VideoData {
   status: number,
-  progress: number
+  progress: number,
+  downloadProgress?: {
+    transferred: number,
+    total: number,
+    timestamp: number
+  },
+  originalUrl?: string,
+  qualityLabel?: string,
+  startTime?: number
 }
 
 export type TaskList = Map<string, TaskData>

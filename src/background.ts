@@ -252,6 +252,46 @@ ipcMain.handle('open-reload-video-dialog', (event, taskCount) => {
   })
 })
 
+// 处理暂停/继续下载
+ipcMain.handle('toggle-pause-download', async (event, taskId) => {
+  try {
+    const task = store.get(`taskList.${taskId}`)
+    if (!task) return { success: false, message: '任务不存在' }
+
+    // 导入bilibili模块中的togglePauseDownload方法
+    const { togglePauseDownload } = require('./core/bilibili')
+
+    // 判断当前状态
+    const isPaused = task.status !== STATUS.PAUSED
+    
+    // 调用togglePauseDownload方法
+    const result = await togglePauseDownload(taskId, isPaused)
+    
+    if (result) {
+      // 更新任务状态
+      const newStatus = isPaused ? STATUS.PAUSED : STATUS.PLAN_START
+      const updateData = {
+        id: taskId,
+        status: newStatus
+      }
+      
+      // 通知前端更新状态
+      event.sender.send('download-video-status', updateData)
+      
+      return { 
+        success: true, 
+        message: isPaused ? '已暂停下载' : '已继续下载',
+        isPaused: isPaused
+      }
+    } else {
+      return { success: false, message: isPaused ? '暂停下载失败' : '继续下载失败' }
+    }
+  } catch (error) {
+    console.error('处理暂停/继续下载出错:', error)
+    return { success: false, message: '处理出错' }
+  }
+})
+
 // 保存弹幕文件
 ipcMain.on('save-danmuku-file', (event, content, path) => {
   fs.writeFile(path, content, { encoding: 'utf8' })
