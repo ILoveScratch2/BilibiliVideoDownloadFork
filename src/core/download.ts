@@ -6,6 +6,7 @@ import { TaskData, SettingData } from '../type'
 import store from './mainStore'
 import { throttle } from 'lodash'
 import { STATUS } from '../assets/data/status'
+import { ipcMain } from 'electron'
 
 const log = require('electron-log')
 const stream = require('stream')
@@ -104,13 +105,26 @@ export default async (videoInfo: TaskData, event: IpcMainEvent, setting: Setting
     },
     cookie: `SESSDATA=${setting.SESSDATA}`
   }
-  function videoProgressNotify (progress: any) {
+  // 保存下载进度
+  const saveDownloadProgress = (videoInfo: any, progress: any) => {
+    store.set(`taskList.${videoInfo.id}.downloadProgress`, {
+      transferred: progress.transferred,
+      total: progress.total,
+      timestamp: Date.now()
+    })
+  }
+  // 修改视频下载进度通知
+  const videoProgressNotify = (progress: any) => {
     const updateData = {
       id: videoInfo.id,
       status: STATUS.VIDEO_DOWNLOADING,
-      progress: Math.round(progress.percent * 100 * 0.75)
+      progress: Math.round(progress.percent * 100),
+      downloadProgress: {
+        transferred: progress.transferred,
+        total: progress.total,
+        timestamp: Date.now()
+      }
     }
-    // console.log('id', videoInfo.id, Math.round(progress.percent * 100 * 0.75))
     event.reply('download-video-status', updateData)
     store.set(`taskList.${videoInfo.id}`, Object.assign(videoInfo, updateData))
     //   {
@@ -241,4 +255,32 @@ export default async (videoInfo: TaskData, event: IpcMainEvent, setting: Setting
     })
     handleDeleteFile(setting, videoInfo)
   }
-}
+  ipcMain.on('resume-download', async (event, task) => {
+    const savedProgress = store.get(`taskList.${task.id}.downloadProgress`)
+    if (savedProgress) {
+      // 使用 Range 头继续下载
+      const options = {
+        headers: {
+          'Range': `bytes=${savedProgress.transferred}-`
+        }
+      }
+      // 继续下载逻辑
+      // ... 实现断点续传下载
+    }
+  })
+  ipcMain.on('refresh-download-url', async (event, task) => {
+    try {
+      // 重新获取下载链接
+      const newUrls = await getBilibiliDownloadUrl(task.bvid, task.cid)
+      // 更新任务信息
+      task.downloadUrls = newUrls
+      store.set(`taskList.${task.id}`, task)
+      // 开始下载
+      event.reply('resume-download', task)
+    } catch (error) {
+      console.error('刷新下载链接失败:', error)
+      // 更新任务状态为失败
+      task.status = STATUS.FAIL
+      store.set(`taskList.${task.id}`, task)
+    }
+  })

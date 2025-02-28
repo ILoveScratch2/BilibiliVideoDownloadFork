@@ -134,6 +134,11 @@ ipcMain.handle('show-context-menu', (event, type: string) => {
           click: () => resolve('delete')
         },
         {
+          label: '暂停/继续下载',
+          type: 'normal',
+          click: () => resolve('togglePause')
+        },
+        {
           label: '重新下载',
           type: 'normal',
           click: () => resolve('reload')
