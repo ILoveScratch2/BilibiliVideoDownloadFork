@@ -4,7 +4,8 @@ import { qualityMap } from '../assets/data/quality'
 import { customAlphabet } from 'nanoid'
 import alphabet from '../assets/data/alphabet'
 import { VideoData, Page, DownloadUrl, Subtitle, TaskData, Audio } from '../type'
-import { store, pinia } from '../store'
+import { store as pStore, pinia } from '../store'
+import mainStore from './mainStore'
 import { STATUS } from '../assets/data/status'
 
 // 自定义uuid
@@ -85,7 +86,7 @@ const getDownloadList = async (videoInfo: VideoData, selected: number[], quality
 
 const addDownload = (videoList: VideoData[] | TaskData[]) => {
   const allowDownloadCount =
-    store.settingStore(pinia).downloadingMaxSize - store.baseStore(pinia).downloadingTaskCount
+    mainStore.downloadingMaxSize - pStore.baseStore(pinia).downloadingTaskCount
   const taskList: TaskData[] = []
   if (allowDownloadCount >= 0) {
     videoList.forEach((item, index) => {
@@ -116,7 +117,7 @@ const saveResponseCookies = (cookies: string[]) => {
   if (cookies && cookies.length) {
     const cookiesString = cookies.join(';')
     console.log('bfe: ', cookiesString)
-    store.settingStore(pinia).setBfeId(cookiesString)
+    pStore.settingStore(pinia).setBfeId(cookiesString)
   }
 }
 
@@ -190,7 +191,7 @@ const checkUrlRedirect = async (videoUrl: string) => {
     config: {
       headers: {
         'User-Agent': ua,
-        cookie: `SESSDATA=${store.settingStore(pinia).SESSDATA}`
+        cookie: `SESSDATA=${pStore.settingStore(pinia).SESSDATA}`
       }
     }
   }
@@ -274,6 +275,7 @@ const parseList = async (html: string, url: string) => {
     const videoInfo = html.match(/<script>window\.__INITIAL_STATE__=([\s\S]*?);\(function\(\)/)
     if (!videoInfo) throw new Error(`parse bv error ${url}`)
     const { videoData, resourceList, playlist, mediaListInfo } = JSON.parse(videoInfo[1])
+
     console.log(videoData)
     // 获取视频下载地址
     let acceptQuality = null
@@ -350,7 +352,7 @@ const parseEP = async (html: string, url: string) => {
     const config = {
       headers: {
         'User-Agent': randUserAgent(),
-        cookie: `SESSDATA=${store.settingStore(pinia).SESSDATA}`
+        cookie: `SESSDATA=${pStore.settingStore(pinia).SESSDATA}`
       },
       responseType: 'json'
     }
@@ -441,7 +443,7 @@ const parseSS = async (html: string) => {
       config: {
         headers: {
           'User-Agent': randUserAgent(),
-          cookie: `SESSDATA=${store.settingStore(pinia).SESSDATA}`
+          cookie: `SESSDATA=${pStore.settingStore(pinia).SESSDATA}`
         }
       }
     }
@@ -454,8 +456,8 @@ const parseSS = async (html: string) => {
 
 // 获取视频清晰度列表
 const getAcceptQuality = async (cid: string, bvid: string) => {
-  const SESSDATA = store.settingStore(pinia).SESSDATA
-  const bfeId = store.settingStore(pinia).bfeId
+  const SESSDATA = pStore.settingStore(pinia).SESSDATA
+  const bfeId = pStore.settingStore(pinia).bfeId
   const config = {
     headers: {
       'User-Agent': randUserAgent(),
@@ -505,8 +507,8 @@ const getAcceptQuality = async (cid: string, bvid: string) => {
 
 // 获取指定清晰度视频下载地址
 const getDownloadUrl = async (cid: number, bvid: string, quality: number) => {
-  const SESSDATA = store.settingStore(pinia).SESSDATA
-  const bfeId = store.settingStore(pinia).bfeId
+  const SESSDATA = pStore.settingStore(pinia).SESSDATA
+  const bfeId = pStore.settingStore(pinia).bfeId
   const config = {
     headers: {
       'User-Agent': randUserAgent(),
@@ -575,8 +577,8 @@ const getDownloadUrl = async (cid: number, bvid: string, quality: number) => {
 
 // 获取视频字幕
 const getSubtitle = async (cid: number, bvid: string) => {
-  const SESSDATA = store.settingStore(pinia).SESSDATA
-  const bfeId = store.settingStore(pinia).bfeId
+  const SESSDATA = pStore.settingStore(pinia).SESSDATA
+  const bfeId = pStore.settingStore(pinia).bfeId
   const config = {
     headers: {
       'User-Agent': randUserAgent(),
@@ -604,10 +606,10 @@ const handleFilePathList = (page: number, title: string, videoInfo: VideoData, b
   const collectionName = (Array.isArray(videoInfo.page) && videoInfo.page.length > 1)
     ? videoInfo.page[0].collectionName
     : ''
-  const storeDownloadPath = store.settingStore().downloadPath
+  const storeDownloadPath = pStore.settingStore().downloadPath
   const downloadPath = collectionName ? `${storeDownloadPath}/${collectionName}` : storeDownloadPath
   const name = `${(page && saveFilePrefix) ? `[P${page}]` : ''}${filterTitle(`${up ? `${up}-` : ''}${title}-${bvid}-${id}`)}`
-  const isFolder = store.settingStore().isFolder
+  const isFolder = pStore.settingStore().isFolder
   let pathList = [
     `${downloadPath}/${name}.mp4`,
     `${downloadPath}/${name}.png`,
@@ -633,10 +635,10 @@ const handleFileDir = (page: number, title: string, videoInfo: VideoData, bvid: 
   const collectionName = (Array.isArray(videoInfo.page) && videoInfo.page.length > 1)
     ? videoInfo.page[0].collectionName
     : ''
-  const storeDownloadPath = store.settingStore().downloadPath
+  const storeDownloadPath = pStore.settingStore().downloadPath
   const downloadPath = collectionName ? `${storeDownloadPath}/${collectionName}` : storeDownloadPath
   const name = `${(page && saveFilePrefix) ? `[P${page}]` : ''}${filterTitle(`${up ? `${up}-` : ''}${title}-${bvid}-${id}`)}`
-  const isFolder = store.settingStore().isFolder
+  const isFolder = pStore.settingStore().isFolder
   return `${downloadPath}${isFolder ? `/${name}/` : ''}`
 }
 
@@ -764,13 +766,13 @@ function handleAudio (dash: any) {
 }
 
 // 处理暂停/继续下载
-async togglePauseDownload(taskId: string, isPaused: boolean) {
-  const task = store.get(`taskList.${taskId}`)
+const togglePauseDownload = async (taskId: string, isPaused: boolean) => {
+  const task = mainStore.get(`taskList.${taskId}`)
   if (!task) return false
 
   if (isPaused) {
     // 暂停下载
-    store.set(`taskList.${taskId}.status`, STATUS.PAUSED)
+    mainStore.set(`taskList.${taskId}.status`, STATUS.PAUSED)
     return true
   } else {
     // 继续下载 - 需要重新获取下载地址
@@ -779,7 +781,7 @@ async togglePauseDownload(taskId: string, isPaused: boolean) {
       const originalStatus = task.status
       
       // 设置为准备开始下载状态
-      store.set(`taskList.${taskId}.status`, STATUS.PLAN_START)
+      mainStore.set(`taskList.${taskId}.status`, STATUS.PLAN_START)
       
       // 重新获取下载地址
       const currentCid = task.cid
@@ -791,12 +793,12 @@ async togglePauseDownload(taskId: string, isPaused: boolean) {
       
       if (!downloadUrlData || !downloadUrlData.video || !downloadUrlData.audio) {
         // 如果获取失败，恢复原状态
-        store.set(`taskList.${taskId}.status`, originalStatus)
+        mainStore.set(`taskList.${taskId}.status`, originalStatus)
         return false
       }
       
       // 更新下载地址
-      store.set(`taskList.${taskId}.downloadUrl`, downloadUrlData)
+      mainStore.set(`taskList.${taskId}.downloadUrl`, downloadUrlData)
       
       return true
     } catch (error) {
