@@ -52,7 +52,18 @@ module.exports = {
       }
     }
   },
-  configureWebpack: {},
+  configureWebpack: {
+    resolve: {
+      fallback: {
+        path: require.resolve('path-browserify'),
+        fs: false,
+        util: require.resolve('util/'),
+        crypto: require.resolve('crypto-browserify'),
+        assert: require.resolve('assert/'),
+        os: require.resolve('os-browserify/browser')
+      }
+    }
+  },
   css: {
     loaderOptions: {
       less: {
