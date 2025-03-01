@@ -280,32 +280,4 @@ export default async (videoInfo: TaskData, event: IpcMainEvent, setting: Setting
     })
     handleDeleteFile(setting, videoInfo)
   }
-  ipcMain.on('resume-download', async (event, task) => {
-    const savedProgress = store.get(`taskList.${task.id}.downloadProgress`)
-    if (savedProgress) {
-      // 使用 Range 头继续下载
-      const options = {
-        headers: {
-          'Range': `bytes=${savedProgress.transferred}-`
-        }
-      }
-      // 继续下载逻辑
-      // ... 实现断点续传下载
-    }
-  })
-  ipcMain.on('refresh-download-url', async (event, task) => {
-    try {
-      // 重新获取下载链接
-      const newUrls = await getBilibiliDownloadUrl(task.bvid, task.cid)
-      // 更新任务信息
-      task.downloadUrls = newUrls
-      store.set(`taskList.${task.id}`, task)
-      // 开始下载
-      event.reply('resume-download', task)
-    } catch (error) {
-      console.error('刷新下载链接失败:', error)
-      // 更新任务状态为失败
-      task.status = STATUS.FAIL
-      store.set(`taskList.${task.id}`, task)
-    }
-  })
+}

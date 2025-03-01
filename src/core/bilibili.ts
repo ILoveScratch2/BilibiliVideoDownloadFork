@@ -787,7 +787,7 @@ async togglePauseDownload(taskId: string, isPaused: boolean) {
       const quality = task.quality
       
       // 获取新的下载URL
-      const downloadUrlData = await this.getDownloadUrl(currentCid, currentBvid, quality)
+      const downloadUrlData = await getDownloadUrl(currentCid, currentBvid, quality)
       
       if (!downloadUrlData || !downloadUrlData.video || !downloadUrlData.audio) {
         // 如果获取失败，恢复原状态
