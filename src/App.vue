@@ -172,14 +172,20 @@ onMounted(() => {
       }
       store.baseStore(pinia).addDownloadingTaskCount(count)
     }
-    // 视频下载中 音频下载中 合成中 只更新pinia
+    // 视频下载中 音频下载中 合成中 暂停中 只更新pinia
     if (task && [
       STATUS.PLAN_START,
       STATUS.VIDEO_DOWNLOADING,
       STATUS.AUDIO_DOWNLOADING,
-      STATUS.MERGING
+      STATUS.MERGING,
+      STATUS.PAUSED
     ].includes(status)) {
       store.taskStore(pinia).setTaskEasy([{ ...task, status, progress }])
+
+      // 如果是暂停状态，减少正在下载的任务数
+      if (status === STATUS.PAUSED) {
+        store.baseStore(pinia).reduceDownloadingTaskCount(1)
+      }
     }
   })
   // 下载弹幕

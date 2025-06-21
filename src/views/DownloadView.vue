@@ -126,9 +126,14 @@ const showContextmenu = async (key: string) => {
   if (!isSelectKey) {
     switchItem(key)
   }
+
+  // 获取当前任务状态
+  const currentTask = taskList.value.get(key)
+  const taskStatus = currentTask?.status
+
   let res = ''
   try {
-    res = await window.electron.showContextmenu('download')
+    res = await window.electron.showContextmenu('download', taskStatus)
   } catch (e) {
     console.log(e)
   }
@@ -143,6 +148,8 @@ const showContextmenu = async (key: string) => {
     reloadDownload()
   } else if (res === 'play') {
     playVideo()
+  } else if (res === 'pauseResume') {
+    handlePauseResume()
   }
 }
 
@@ -192,6 +199,30 @@ const reloadDownload = async () => {
   }
 
   loading()
+}
+
+const handlePauseResume = () => {
+  if (!rightTask.value || !rightTask.value.id) {
+    message.error('请选择一个任务')
+    return
+  }
+
+  const task = rightTask.value
+  const isDownloading = [STATUS.VIDEO_DOWNLOADING, STATUS.AUDIO_DOWNLOADING, STATUS.MERGING].includes(task.status)
+  const isPaused = task.status === STATUS.PAUSED
+
+  if (isDownloading) {
+    // 暂停下载
+    window.electron.pauseDownload(task.id)
+    message.info(`已暂停下载: ${task.title}`)
+  } else if (isPaused) {
+    // 继续下载
+    window.electron.resumeDownload(task)
+    message.info(`已继续下载: ${task.title}`)
+    store.baseStore().addDownloadingTaskCount(1)
+  } else {
+    message.warning('当前任务状态不支持暂停/继续操作')
+  }
 }
 
 const openDir = () => {

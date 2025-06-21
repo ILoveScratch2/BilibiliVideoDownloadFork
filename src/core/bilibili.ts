@@ -544,7 +544,7 @@ const getAcceptQuality = async (cid: string, bvid: string) => {
 }
 
 // 获取指定清晰度视频下载地址
-const getDownloadUrl = async (cid: number, bvid: string, quality: number) => {
+export const getDownloadUrl = async (cid: number, bvid: string, quality: number) => {
   const SESSDATA = store.settingStore(pinia).SESSDATA
   const bfeId = store.settingStore(pinia).bfeId
   const config = {

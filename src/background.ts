@@ -124,10 +124,16 @@ ipcMain.on('delete-store', (event, path) => {
 })
 
 // 创建右键菜单
-ipcMain.handle('show-context-menu', (event, type: string) => {
+ipcMain.handle('show-context-menu', (event, type: string, taskStatus?: number) => {
   return new Promise((resolve, reject) => {
     const menuMap = {
       download: [
+        {
+          label: '暂停/继续 下载',
+          type: 'normal',
+          click: () => resolve('pauseResume'),
+          visible: taskStatus !== undefined && [STATUS.VIDEO_DOWNLOADING, STATUS.AUDIO_DOWNLOADING, STATUS.MERGING, STATUS.PAUSED].includes(taskStatus)
+        },
         {
           label: '删除任务',
           type: 'normal',
@@ -197,6 +203,29 @@ ipcMain.handle('delete-videos', (event, filePaths) => {
 ipcMain.on('download-video', (event, task: TaskData) => {
   const setting: SettingData = store.get('setting')
   downloadVideo(task, event, setting)
+})
+
+// 暂停下载
+ipcMain.on('pause-download', async (event, taskId: string) => {
+  try {
+    const { pauseDownload } = await import('./core/download')
+    await pauseDownload(taskId)
+    log.info(`下载已暂停: ${taskId}`)
+  } catch (error: any) {
+    log.error(`暂停下载失败: ${taskId} - ${error.message}`)
+  }
+})
+
+// 继续下载
+ipcMain.on('resume-download', async (event, task: TaskData) => {
+  try {
+    const { resumeDownload } = await import('./core/download')
+    const setting: SettingData = store.get('setting')
+    await resumeDownload(task, event, setting)
+    log.info(`下载已继续: ${task.title}`)
+  } catch (error: any) {
+    log.error(`继续下载失败: ${task.title} - ${error.message}`)
+  }
 })
 
 // 获取视频大小
@@ -302,7 +331,15 @@ function initStore () {
     store.set('taskList', {})
   }
   // 存储store
-  win.webContents.on('did-finish-load', () => {
+  win.webContents.on('did-finish-load', async () => {
+    // 清理所有暂停状态
+    try {
+      const { clearAllPauseStates } = await import('./core/pauseManager')
+      clearAllPauseStates()
+    } catch (error) {
+      log.error('清理暂停状态失败:', error)
+    }
+
     // 开启应用时如果有进行中的任务都重置为失败状态
     // 检查当前是否有下载中任务
     const taskList = store.get('taskList')

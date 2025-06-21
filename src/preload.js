@@ -28,8 +28,8 @@ contextBridge.exposeInMainWorld('electron', {
   deleteStore (path) {
     ipcRenderer.send('delete-store', path)
   },
-  showContextmenu (type) {
-    return ipcRenderer.invoke('show-context-menu', type)
+  showContextmenu (type, taskStatus) {
+    return ipcRenderer.invoke('show-context-menu', type, taskStatus)
   },
   openDir (list) {
     ipcRenderer.send('open-dir', list)
@@ -42,6 +42,12 @@ contextBridge.exposeInMainWorld('electron', {
   },
   downloadVideo (task) {
     ipcRenderer.send('download-video', task)
+  },
+  pauseDownload (taskId) {
+    ipcRenderer.send('pause-download', taskId)
+  },
+  resumeDownload (task) {
+    ipcRenderer.send('resume-download', task)
   },
   getVideoSize (id) {
     return ipcRenderer.invoke('get-video-size', id)
