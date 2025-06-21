@@ -55,7 +55,10 @@ function handleDeleteFile (setting: SettingData, videoInfo: TaskData) {
   }
 }
 
-export default async (videoInfo: TaskData, event: IpcMainEvent, setting: SettingData, isResume = false) => {
+export default async (videoInfo: TaskData, event: IpcMainEvent, setting: SettingData, isResume?: boolean) => {
+  if (isResume === undefined) {
+    isResume = false
+  }
   log.info(videoInfo.id, videoInfo.title)
   const takeInfo = store.get(`taskList.${videoInfo.id}`)
   log.info('mainStore', takeInfo, takeInfo && takeInfo.status)
@@ -171,20 +174,23 @@ export default async (videoInfo: TaskData, event: IpcMainEvent, setting: Setting
   if (startPhase !== 'video') {
     log.info(`跳过视频下载阶段: ${updatedVideoInfo.title}`)
   } else {
-    const downloadConfig = {
+    const downloadConfig: any = {
       headers: {
         'User-Agent': randUserAgent(),
-        referer: updatedVideoInfo.url,
-        ...(videoStartByte > 0 && { Range: `bytes=${videoStartByte}-` })
+        referer: updatedVideoInfo.url
       },
       cookie: `SESSDATA=${setting.SESSDATA}`
+    }
+
+    if (videoStartByte > 0) {
+      downloadConfig.headers.Range = `bytes=${videoStartByte}-`
     }
 
     let currentVideoProgress = pauseState?.videoProgress || 0
     let videoDownloadedBytes = videoStartByte
     let videoTotalBytes = 0
 
-    function videoProgressNotify (progress: any) {
+    const videoProgressNotify = (progress: any) => {
       // 检查暂停状态
       if (isPaused(updatedVideoInfo.id)) {
         return
@@ -276,20 +282,23 @@ export default async (videoInfo: TaskData, event: IpcMainEvent, setting: Setting
   if (startPhase === 'merge') {
     log.info(`跳过音频下载阶段: ${updatedVideoInfo.title}`)
   } else {
-    const audioDownloadConfig = {
+    const audioDownloadConfig: any = {
       headers: {
         'User-Agent': randUserAgent(),
-        referer: updatedVideoInfo.url,
-        ...(audioStartByte > 0 && { Range: `bytes=${audioStartByte}-` })
+        referer: updatedVideoInfo.url
       },
       cookie: `SESSDATA=${setting.SESSDATA}`
+    }
+
+    if (audioStartByte > 0) {
+      audioDownloadConfig.headers.Range = `bytes=${audioStartByte}-`
     }
 
     let currentAudioProgress = pauseState?.audioProgress || 0
     let audioDownloadedBytes = audioStartByte
     let audioTotalBytes = 0
 
-    function audioProgressNotify (progress: any) {
+    const audioProgressNotify = (progress: any) => {
       // 检查暂停状态
       if (isPaused(updatedVideoInfo.id)) {
         return
@@ -503,5 +512,4 @@ export async function resumeDownload(taskData: TaskData, event: IpcMainEvent, se
   // 重新开始下载（带恢复标志）
   const downloadFunction = (await import('./download')).default
   return await downloadFunction(taskData, event, setting, true)
-}
 }
