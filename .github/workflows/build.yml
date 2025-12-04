@@ -8,7 +8,7 @@ on:
   push:
     tags:
       - "v*.*.*"
-  Workflow_dispatch:
+  workflow_dispatch:
   
 
 # Workflow's jobs
