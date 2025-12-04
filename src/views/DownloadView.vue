@@ -33,9 +33,18 @@
                     :key="`progress_${item.key}`"
                     :percent="item.value.progress"
                     :status="formatDownloadStatus(item.value.status, 'value')"
-                    :strokeColor="Number(item.value.status)===STATUS.FAIL ? '#ff0000' :'#fb7299'" />
+                    :strokeColor="getProgressColor(item.value.status)" />
                 </div>
-                <div class="reload" v-if="Number(item.value.status)===STATUS.FAIL" @click="reloadBtnClick(item.key)">
+                <!-- 暂停 -->
+                <div class="pause-resume" v-if="isDownloadingStatus(item.value.status)" @click.stop="pauseBtnClick(item.key)">
+                  <PauseCircleOutlined class="text-active" />
+                </div>
+                <!-- 继续 -->
+                <div class="pause-resume" v-else-if="Number(item.value.status)===STATUS.PAUSED" @click.stop="resumeBtnClick(item.key)">
+                  <PlayCircleOutlined class="text-active" />
+                </div>
+                <!-- 重试 -->
+                <div class="reload" v-else-if="Number(item.value.status)===STATUS.FAIL" @click.stop="reloadBtnClick(item.key)">
                   <ReloadOutlined class="text-active" />
                 </div>
               </div>
@@ -98,14 +107,14 @@
 <script lang="ts" setup>
 import { ref, onMounted, toRaw, h, onUnmounted, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { ReloadOutlined, ClearOutlined } from '@ant-design/icons-vue'
+import { ReloadOutlined, ClearOutlined, PauseCircleOutlined, PlayCircleOutlined } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import { downloadStatusMap, STATUS, STATUS_VALUE } from '../assets/data/status'
 import { store } from '../store'
 import { qualityMap } from '../assets/data/quality'
-import { checkUrl, checkUrlRedirect, parseHtml, getDownloadList, addDownload } from '../core/bilibili'
+import { checkUrl, checkUrlRedirect, parseHtml, getDownloadList, addDownload, getDownloadUrl } from '../core/bilibili'
 import { nanoid } from '@/utils'
 import { useHotkey } from '@/core/hook/useHotkey'
 import type { TaskData } from '../type/index'
@@ -134,6 +143,59 @@ const formatQuality = (quality: number) => {
 
 const formatVideoSize = (size: number) => {
   return size === -1 ? '' : `${(size / 1000 / 1000).toFixed(2)}MB`
+}
+
+// 判断下载中状态
+const isDownloadingStatus = (status: number) => {
+  return status === STATUS.VIDEO_DOWNLOADING || status === STATUS.AUDIO_DOWNLOADING
+}
+
+// 获取颜色
+const getProgressColor = (status: number) => {
+  if (status === STATUS.FAIL) return '#ff0000'
+  if (status === STATUS.PAUSED) return '#faad14'
+  return '#fb7299'
+}
+
+// 暂停下载
+const pauseBtnClick = (key: string) => {
+  window.electron.pauseDownload(key)
+  store.baseStore().addDownloadingTaskCount(-1)
+  message.info('下载已暂停')
+}
+
+// 继续下载
+const resumeBtnClick = async (key: string) => {
+  const task = store.taskStore().getTask(key)
+  if (!task) {
+    message.error('任务不存在')
+    return
+  }
+
+  const loading = message.loading('正在获取下载链接...', 0)
+
+  try {
+    const { video, audio } = await getDownloadUrl(task.cid, task.bvid, task.quality)
+
+    if (!video || !audio) {
+      message.error('获取下载链接失败，请重新下载')
+      loading()
+      return
+    }
+    const updatedTask: TaskData = {
+      ...task,
+      downloadUrl: { video, audio },
+      status: STATUS.VIDEO_DOWNLOADING
+    }
+    store.taskStore().setTask([updatedTask])
+    store.baseStore().addDownloadingTaskCount(1)
+    window.electron.resumeDownload(updatedTask)
+    message.success('继续下载中...')
+  } catch (e: any) {
+    message.error(`继续下载失败: ${e.message || e}`)
+  } finally {
+    loading()
+  }
 }
 
 const switchItem = (key: string) => {
@@ -421,6 +483,20 @@ useHotkey('ctrl+a', () => {
           z-index: 2;
           img {
             vertical-align: middle;
+          }
+        }
+        .pause-resume {
+          width: 20px;
+          text-align: center;
+          color: rgb(251, 114, 153);
+          position: absolute;
+          right: -8px;
+          top: 2px;
+          z-index: 2;
+          cursor: pointer;
+          transition: transform 0.2s;
+          &:hover {
+            transform: scale(1.2);
           }
         }
       }

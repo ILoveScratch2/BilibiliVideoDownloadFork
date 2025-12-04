@@ -12,7 +12,9 @@ const STATUS = {
   /** 排队中 */
   PENDING: 4,
   /** 失败 */
-  FAIL: 5
+  FAIL: 5,
+  /** 已暂停 */
+  PAUSED: 7
 } as const
 
 type ValueOf<T> = T[keyof T]
@@ -46,6 +48,10 @@ const downloadStatusMap = {
   [STATUS.FAIL]: {
     label: '下载失败',
     value: 'exception'
+  },
+  [STATUS.PAUSED]: {
+    label: '已暂停',
+    value: 'normal'
   }
 }
 

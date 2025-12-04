@@ -69,6 +69,18 @@ contextBridge.exposeInMainWorld('electron', {
     // log.functions.log('[bridge-downloadVideoList]:', taskList)
     ipcRenderer.send('download-video-list', taskList)
   },
+  pauseDownload (taskId) {
+    // log.functions.log('[bridge-pauseDownload]:', taskId)
+    ipcRenderer.send('pause-download', taskId)
+  },
+  resumeDownload (task) {
+    // log.functions.log('[bridge-resumeDownload]:', task)
+    ipcRenderer.send('resume-download', task)
+  },
+  isDownloading (taskId) {
+    // log.functions.log('[bridge-isDownloading]:', taskId)
+    return ipcRenderer.invoke('is-downloading', taskId)
+  },
   getVideoSize (id) {
     // log.functions.log('[bridge-getVideoSize]:', id)
     return ipcRenderer.invoke('get-video-size', id)

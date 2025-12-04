@@ -277,6 +277,25 @@ ipcMain.on('download-video-list', (event, taskList: TaskData[]) => {
   })
 })
 
+// 暂停下载任务
+ipcMain.on('pause-download', (event, taskId: string) => {
+  const { pauseDownload } = require('./core/download')
+  pauseDownload(taskId, event)
+})
+
+// 继续下载任务
+ipcMain.on('resume-download', (event, task: TaskData) => {
+  const setting: SettingData = store.get('setting')
+  // isResume = true，表示这是续传
+  downloadVideo(task, event, setting, true)
+})
+
+// 检查任务下载中
+ipcMain.handle('is-downloading', (event, taskId: string) => {
+  const { isDownloading } = require('./core/download')
+  return Promise.resolve(isDownloading(taskId))
+})
+
 // 获取视频大小
 ipcMain.handle('get-video-size', (event, id: string) => {
   const task = store.get(`taskList.${id}`)
@@ -398,7 +417,7 @@ function initStore () {
     const taskList = store.get('taskList')
     for (const key in taskList) {
       const task = taskList[key]
-      if (task.status !== STATUS.COMPLETED && task.status !== STATUS.FAIL) {
+      if (task.status !== STATUS.COMPLETED && task.status !== STATUS.FAIL && task.status !== STATUS.PAUSED) {
         task.status = STATUS.FAIL
       }
     }
@@ -415,7 +434,7 @@ function getDownloadingTaskCount () {
   let count = 0
   for (const key in taskList) {
     const task = taskList[key]
-    if (task.status !== STATUS.COMPLETED && task.status !== STATUS.FAIL) {
+    if (task.status !== STATUS.COMPLETED && task.status !== STATUS.FAIL && task.status !== STATUS.PAUSED) {
       count += 1
       // task.progress = 100
     }
@@ -426,7 +445,7 @@ function setDownloadingTaskFail () {
   const taskList = store.get('taskList')
   for (const key in taskList) {
     const task = taskList[key]
-    if (task.status !== STATUS.COMPLETED && task.status !== STATUS.FAIL) {
+    if (task.status !== STATUS.COMPLETED && task.status !== STATUS.FAIL && task.status !== STATUS.PAUSED) {
       console.log('FAIL', JSON.stringify(task, null, 2))
       task.status = STATUS.FAIL
       // task.progress = 100

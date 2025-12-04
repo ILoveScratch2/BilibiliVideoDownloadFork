@@ -25,6 +25,12 @@ declare interface Window {
     downloadVideo: (task: TaskData) => void
     // 下载视频列表
     downloadVideoList: (taskList: TaskData[]) => void
+    // 暂停下载任务
+    pauseDownload: (taskId: string) => void
+    // 继续下载任务
+    resumeDownload: (task: TaskData) => void
+    // 检查任务下载中
+    isDownloading: (taskId: string) => Promise<boolean>
     // 打开链接
     openBrowser: (url: string) => void
     // 打开本地文件(用来播放视频)

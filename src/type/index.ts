@@ -119,7 +119,13 @@ export interface VideoData {
 
 export interface TaskData extends VideoData {
   status: number,
-  progress: number
+  progress: number,
+  /** 已下载的视频字节数 */
+  downloadedVideoBytes?: number,
+  /** 已下载的音频字节数 */
+  downloadedAudioBytes?: number,
+  /** 暂停时的阶段：'video' | 'audio' */
+  pausedPhase?: 'video' | 'audio'
 }
 
 export type TaskList = Map<string, TaskData>

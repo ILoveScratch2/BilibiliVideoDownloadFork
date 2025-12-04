@@ -895,5 +895,6 @@ export {
   checkUrlRedirect,
   parseHtml,
   getDownloadList,
-  addDownload
+  addDownload,
+  getDownloadUrl
 }
